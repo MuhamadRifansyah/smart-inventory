@@ -17,6 +17,49 @@ class ItemLogController extends Controller
         return view('items.logs', compact('logs'));
     }
 
+    public function exportCsv()
+    {
+        $fileName = 'item_logs_' . date('Y-m-d') . '.csv';
+
+        $logs = ItemLog::with(['item', 'user'])
+            ->latest()
+            ->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename={$fileName}",
+        ];
+
+        $callback = function () use ($logs) {
+            $file = fopen('php://output', 'w');
+
+            // Header CSV
+            fputcsv($file, [
+                'Tanggal',
+                'Barang',
+                'User',
+                'Tipe',
+                'Jumlah',
+                'Catatan',
+            ]);
+
+            foreach ($logs as $log) {
+                fputcsv($file, [
+                    $log->created_at->format('Y-m-d H:i:s'),
+                    $log->item->name,
+                    $log->user->name,
+                    strtoupper($log->type),
+                    $log->quantity,
+                    $log->note,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function create(Item $item)
     {
         return view('items.log', compact('item'));
@@ -30,14 +73,13 @@ class ItemLogController extends Controller
             'note' => 'nullable|string',
         ]);
 
-        // validasi stok
         if ($request->type === 'out' && $item->stock < $request->quantity) {
             return back()->withErrors([
-                'quantity' => 'Stok tidak cukup'
+                'quantity' => 'Stok tidak cukup',
             ]);
         }
 
-        // update stok
+        // Update stok
         if ($request->type === 'in') {
             $item->stock += $request->quantity;
         } else {
@@ -46,7 +88,7 @@ class ItemLogController extends Controller
 
         $item->save();
 
-        // SIMPAN LOG (INI YANG TADI KURANG TUTUP)
+        // Simpan log
         ItemLog::create([
             'item_id'  => $item->id,
             'user_id'  => auth()->id(),
