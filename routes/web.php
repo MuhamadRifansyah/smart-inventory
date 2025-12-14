@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\ItemController;
 /*
 |--------------------------------------------------------------------------
 | Root Redirect
@@ -34,6 +34,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/items', function () {
             return 'Item List';
         });
+    });
+    Route::middleware(['role:admin,staff'])->group(function () {
+        Route::resource('items', ItemController::class);
     });
 
 });
