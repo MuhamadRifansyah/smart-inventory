@@ -38,6 +38,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin,staff'])->group(function () {
         Route::resource('items', ItemController::class);
     });
+    Route::get('/items-export', [ItemController::class, 'exportCsv'])
+    ->name('items.export');
 
 });
 

@@ -8,6 +8,39 @@ use Illuminate\Http\Request;
 class ItemController extends Controller
 {
     public function index()
+    public function exportCsv()
+{
+    $fileName = 'items_' . date('Y-m-d') . '.csv';
+
+    $items = Item::all();
+
+    $headers = [
+        "Content-Type" => "text/csv",
+        "Content-Disposition" => "attachment; filename=$fileName",
+    ];
+
+    $callback = function () use ($items) {
+        $file = fopen('php://output', 'w');
+
+        // Header CSV
+        fputcsv($file, ['Name', 'Code', 'Stock', 'Unit', 'Created At']);
+
+        foreach ($items as $item) {
+            fputcsv($file, [
+                $item->name,
+                $item->code,
+                $item->stock,
+                $item->unit,
+                $item->created_at,
+            ]);
+        }
+
+        fclose($file);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
+
     {
         $items = Item::latest()->paginate(10);
         return view('items.index', compact('items'));
