@@ -7,7 +7,7 @@
 
     <div class="p-6">
         <a href="{{ route('items.create') }}"
-           class="px-4 py-2 bg-blue-600 text-white rounded">
+           class="px-4 py-2 bg-blue-600 text-black rounded">
             + Tambah Barang
         </a>
 
@@ -17,9 +17,10 @@
             </div>
         @endif
         <a href="{{ route('items.export') }}"
-        class="ml-2 px-4 py-2 bg-green-600 text-white rounded">
+        class="ml-2 px-4 py-2 bg-green-600 text-black rounded">
          Export CSV
      </a>
+     
      
         <table class="mt-6 w-full border">
             <thead>
@@ -42,21 +43,29 @@
                         <a href="{{ route('items.edit', $item) }}" class="text-blue-600">
                             Edit
                         </a>
-
-                        <form action="{{ route('items.destroy', $item) }}"
-                              method="POST"
-                              class="inline">
-                            @csrf
-                            @method('DELETE')
-                            <button onclick="return confirm('Hapus item?')"
-                                    class="text-red-600 ml-2">
-                                Hapus
-                            </button>
-                        </form>
+            
+                        <a href="{{ route('items.log.create', $item) }}"
+                           class="text-indigo-600 ml-2">
+                            Update Stok
+                        </a>
+            
+                        @if(auth()->user()->role === 'admin')
+                            <form action="{{ route('items.destroy', $item) }}"
+                                  method="POST"
+                                  class="inline">
+                                @csrf
+                                @method('DELETE')
+                                <button onclick="return confirm('Hapus item?')"
+                                        class="text-red-600 ml-2">
+                                    Hapus
+                                </button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
                 @endforeach
             </tbody>
+            
         </table>
 
         <div class="mt-4">
