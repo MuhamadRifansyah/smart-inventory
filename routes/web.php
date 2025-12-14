@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\ItemLogController;
+
 /*
 |--------------------------------------------------------------------------
 | Root Redirect
@@ -22,25 +24,38 @@ Route::middleware(['auth'])->group(function () {
         return view('dashboard');
     })->name('dashboard');
 
-    // Admin only
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Only
+    |--------------------------------------------------------------------------
+    */
     Route::middleware(['role:admin'])->group(function () {
         Route::get('/admin', function () {
             return 'Admin Area';
         });
     });
 
-    // Admin & Staff
+    /*
+    |--------------------------------------------------------------------------
+    | Admin & Staff
+    |--------------------------------------------------------------------------
+    */
     Route::middleware(['role:admin,staff'])->group(function () {
-        Route::get('/items', function () {
-            return 'Item List';
-        });
-    });
-    Route::middleware(['role:admin,staff'])->group(function () {
-        Route::resource('items', ItemController::class);
-    });
-    Route::get('/items-export', [ItemController::class, 'exportCsv'])
-    ->name('items.export');
 
+        // CRUD Items
+        Route::resource('items', ItemController::class);
+
+        // Export CSV
+        Route::get('/items-export', [ItemController::class, 'exportCsv'])
+            ->name('items.export');
+
+        // Stock Log
+        Route::get('/items/{item}/log', [ItemLogController::class, 'create'])
+            ->name('items.log.create');
+
+        Route::post('/items/{item}/log', [ItemLogController::class, 'store'])
+            ->name('items.log.store');
+    });
 });
 
 /*
