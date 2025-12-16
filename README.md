@@ -1,4 +1,4 @@
-# Smart Inventory Management System
+# Smart Inventory Management System (On Progress)
 
 A simple fullstack inventory management web application built with **Laravel 11**.  
 This project demonstrates authentication, role-based access control, and CRUD operations.
