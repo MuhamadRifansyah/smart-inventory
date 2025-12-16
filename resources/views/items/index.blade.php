@@ -1,75 +1,137 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800">
-            Daftar Barang
-        </h2>
-    </x-slot>
-
-    <div class="p-6">
+<x-sidebar>
+    <h1 class="text-2xl font-bold mb-6">Items</h1>
+    
+    {{-- SEARCH --}}
+    <form method="GET" class="flex gap-4 mb-4">
+        <input name="search"
+               value="{{ request('search') }}"
+               class="border px-3 py-2 rounded w-64"
+               placeholder="Cari nama / kode">
+    
+        <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="low_stock" value="1"
+                   {{ request('low_stock') ? 'checked' : '' }}>
+            Stok rendah
+        </label>
+    
+        <button class="px-4 py-2 bg-gray-900 text-white rounded">
+            Filter
+        </button>
+    </form>
+    
+    {{-- BULK FORM (ADMIN ONLY) --}}
+    @if(auth()->user()->role === 'admin')
+    <form id="bulkForm" method="POST" action="{{ route('items.bulkDelete') }}">
+        @csrf
+        @method('DELETE')
+    @endif
+    
+    <div class="mb-4 flex gap-3">
+        @if(auth()->user()->role === 'admin')
         <a href="{{ route('items.create') }}"
-           class="px-4 py-2 bg-blue-600 text-black rounded">
+           class="px-4 py-2 bg-gray-900 text-white rounded">
             + Tambah Barang
         </a>
-
-        @if(session('success'))
-            <div class="mt-4 text-green-600">
-                {{ session('success') }}
-            </div>
+    
+        <button type="button"
+                onclick="confirmBulkDelete()"
+                class="px-4 py-2 bg-red-600 text-white rounded">
+            Hapus Terpilih
+        </button>
         @endif
-        <a href="{{ route('items.export') }}"
-        class="ml-2 px-4 py-2 bg-green-600 text-black rounded">
-         Export CSV
-     </a>
-     
-     
-        <table class="mt-6 w-full border">
-            <thead>
-                <tr class="bg-gray-100">
-                    <th class="border p-2">Nama</th>
-                    <th class="border p-2">Kode</th>
-                    <th class="border p-2">Stok</th>
-                    <th class="border p-2">Unit</th>
-                    <th class="border p-2">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($items as $item)
-                <tr>
-                    <td class="border p-2">{{ $item->name }}</td>
-                    <td class="border p-2">{{ $item->code }}</td>
-                    <td class="border p-2">{{ $item->stock }}</td>
-                    <td class="border p-2">{{ $item->unit }}</td>
-                    <td class="border p-2">
-                        <a href="{{ route('items.edit', $item) }}" class="text-blue-600">
-                            Edit
-                        </a>
-            
-                        <a href="{{ route('items.log.create', $item) }}"
-                           class="text-indigo-600 ml-2">
-                            Update Stok
-                        </a>
-            
-                        @if(auth()->user()->role === 'admin')
-                            <form action="{{ route('items.destroy', $item) }}"
-                                  method="POST"
-                                  class="inline">
-                                @csrf
-                                @method('DELETE')
-                                <button onclick="return confirm('Hapus item?')"
-                                        class="text-red-600 ml-2">
-                                    Hapus
-                                </button>
-                            </form>
-                        @endif
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-            
-        </table>
-
-        <div class="mt-4">
-            {{ $items->links() }}
-        </div>
+    
+        <a href="{{ route('items.logs.index') }}"
+           class="px-4 py-2 bg-gray-200 rounded">
+            History
+        </a>
     </div>
-</x-app-layout>
+    
+    <div class="bg-white border rounded-lg overflow-x-auto">
+    <table class="w-full text-sm">
+    <thead class="bg-gray-100">
+    <tr>
+    @if(auth()->user()->role === 'admin')
+    <th class="px-3 text-center">
+        <input type="checkbox" onclick="toggleAll(this)">
+    </th>
+    @endif
+    <th class="px-3">Nama</th>
+    <th class="px-3">Kode</th>
+    <th class="px-3 text-center">Stok</th>
+    <th class="px-3 text-right">Aksi</th>
+    </tr>
+    </thead>
+    
+    <tbody class="divide-y">
+    @forelse($items as $item)
+    <tr>
+    @if(auth()->user()->role === 'admin')
+    <td class="px-3 text-center">
+        <input type="checkbox" name="ids[]" value="{{ $item->id }}">
+    </td>
+    @endif
+    
+    <td class="px-3">{{ $item->name }}</td>
+    <td class="px-3">{{ $item->code }}</td>
+    <td class="px-3 text-center font-semibold">{{ $item->stock }}</td>
+    
+    <td class="px-3 text-right">
+    @if(auth()->user()->role === 'admin')
+    <button onclick="confirmDelete('{{ route('items.destroy',$item) }}')"
+            class="text-red-600 hover:underline">
+        Hapus
+    </button>
+    @else
+    <span class="text-gray-400">-</span>
+    @endif
+    </td>
+    </tr>
+    @empty
+    <tr>
+        <td colspan="5" class="text-center py-6 text-gray-500">
+            Tidak ada data
+        </td>
+    </tr>
+    @endforelse
+    </tbody>
+    </table>
+    </div>
+    
+    @if(auth()->user()->role === 'admin')
+    </form>
+    @endif
+    
+    <script>
+    function toggleAll(src){
+        document.querySelectorAll('[name="ids[]"]').forEach(c=>{
+            c.checked = src.checked
+        })
+    }
+    
+    function confirmBulkDelete(){
+        const checked = document.querySelectorAll('[name="ids[]"]:checked')
+        if(checked.length === 0){
+            alert('Pilih item dulu')
+            return
+        }
+        if(confirm(`Hapus ${checked.length} item?`)){
+            document.getElementById('bulkForm').submit()
+        }
+    }
+    
+    function confirmDelete(url){
+        if(confirm('Hapus item ini?')){
+            const f = document.createElement('form')
+            f.method = 'POST'
+            f.action = url
+            f.innerHTML = `
+                <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="_method" value="DELETE">
+            `
+            document.body.appendChild(f)
+            f.submit()
+        }
+    }
+    </script>
+    </x-sidebar>
+    

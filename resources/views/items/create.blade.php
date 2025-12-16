@@ -1,35 +1,37 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl">Tambah Barang</h2>
-    </x-slot>
+<x-sidebar>
+    <h1 class="text-xl font-bold mb-4">
+        Update Stok: {{ $item->name }}
+    </h1>
 
-    <div class="p-6">
-        <form method="POST" action="{{ route('items.store') }}">
-            @csrf
+    <form method="POST" action="{{ route('items.log.store', $item) }}"
+          class="space-y-4 max-w-md">
+        @csrf
 
-            <div class="mb-4">
-                <label>Nama Barang</label>
-                <input type="text" name="name" class="border w-full p-2">
-            </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Tipe Transaksi</label>
+        
+            <select name="type" class="border rounded px-3 py-2 w-full" required>
+                <option value="IN">IN (Tambah Stok)</option>
+        
+                @if(auth()->user()->role === 'admin')
+                    <option value="OUT">OUT (Kurangi Stok)</option>
+                @endif
+            </select>
+        </div>
+        
+        <div>
+            <label class="block text-sm font-medium">Jumlah</label>
+            <input type="number" name="quantity"
+                   class="w-full border rounded px-3 py-2"
+                   min="1">
+            @error('quantity')
+                <p class="text-red-600 text-sm">{{ $message }}</p>
+            @enderror
+        </div>
 
-            <div class="mb-4">
-                <label>Kode Barang</label>
-                <input type="text" name="code" class="border w-full p-2">
-            </div>
-
-            <div class="mb-4">
-                <label>Stok</label>
-                <input type="number" name="stock" class="border w-full p-2">
-            </div>
-
-            <div class="mb-4">
-                <label>Unit</label>
-                <input type="text" name="unit" class="border w-full p-2">
-            </div>
-
-            <button class="px-4 py-2 bg-green-600 text-white rounded">
-                Simpan
-            </button>
-        </form>
-    </div>
-</x-app-layout>
+        <button
+            class="px-4 py-2 bg-gray-900 text-white rounded">
+            Simpan
+        </button>
+    </form>
+</x-sidebar>

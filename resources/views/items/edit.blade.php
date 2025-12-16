@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-sidebar>
     <x-slot name="header">
         <h2 class="font-semibold text-xl">Edit Barang</h2>
     </x-slot>
@@ -41,4 +41,4 @@
             </button>
         </form>
     </div>
-</x-app-layout>
+</x-sidebar>

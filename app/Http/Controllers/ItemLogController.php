@@ -4,100 +4,94 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\ItemLog;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ItemLogController extends Controller
 {
-    public function index()
-    {
-        $logs = ItemLog::with(['item', 'user'])
-            ->latest()
-            ->paginate(10);
-
-        return view('items.logs', compact('logs'));
-    }
-
-    public function exportCsv()
-    {
-        $fileName = 'item_logs_' . date('Y-m-d') . '.csv';
-
-        $logs = ItemLog::with(['item', 'user'])
-            ->latest()
-            ->get();
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename={$fileName}",
-        ];
-
-        $callback = function () use ($logs) {
-            $file = fopen('php://output', 'w');
-
-            // Header CSV
-            fputcsv($file, [
-                'Tanggal',
-                'Barang',
-                'User',
-                'Tipe',
-                'Jumlah',
-                'Catatan',
-            ]);
-
-            foreach ($logs as $log) {
-                fputcsv($file, [
-                    $log->created_at->format('Y-m-d H:i:s'),
-                    $log->item->name,
-                    $log->user->name,
-                    strtoupper($log->type),
-                    $log->quantity,
-                    $log->note,
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
-    }
-
+    /**
+     * FORM UPDATE STOK
+     */
     public function create(Item $item)
     {
-        return view('items.log', compact('item'));
+        return view('items.log.create', compact('item'));
     }
 
+    /**
+     * SIMPAN LOG + UPDATE STOK (PAKAI TRANSAKSI)
+     */
     public function store(Request $request, Item $item)
     {
         $request->validate([
-            'type' => 'required|in:in,out',
+            'type'     => 'required|in:IN,OUT',
             'quantity' => 'required|integer|min:1',
-            'note' => 'nullable|string',
         ]);
-
-        if ($request->type === 'out' && $item->stock < $request->quantity) {
-            return back()->withErrors([
-                'quantity' => 'Stok tidak cukup',
+    
+        // 🔒 ROLE RULE (ANTI NAKAL)
+        if (auth()->user()->role === 'staff' && $request->type === 'OUT') {
+            abort(403, 'Staff tidak diizinkan mengurangi stok');
+        }
+    
+        $before = $item->stock;
+        $qty    = $request->quantity;
+    
+        $after = $request->type === 'IN'
+            ? $before + $qty
+            : $before - $qty;
+    
+        if ($after < 0) {
+            return back()->with('error', 'Stok tidak mencukupi');
+        }
+    
+        // 🔥 TRANSAKSI DATABASE (AMAN DATA)
+        DB::transaction(function () use ($item, $request, $before, $after, $qty) {
+    
+            $item->update([
+                'stock' => $after
             ]);
-        }
+    
+            ItemLog::create([
+                'item_id'      => $item->id,
+                'user_id'      => auth()->id(),
+                'type'         => $request->type,
+                'quantity'     => $qty,
+                'stock_before' => $before,
+                'stock_after'  => $after,
+            ]);
+        });
+    
+        return redirect()
+            ->route('items.index')
+            ->with('success', 'Stok berhasil diupdate');
+    }
 
-        // Update stok
-        if ($request->type === 'in') {
-            $item->stock += $request->quantity;
-        } else {
-            $item->stock -= $request->quantity;
-        }
+    /**
+     * 🔥 HISTORY / AUDIT LOG + FILTER
+     */
+    public function index(Request $request)
+    {
+        $logs = ItemLog::with(['item','user'])
+            ->when($request->filled('item_id'), function ($q) use ($request) {
+                $q->where('item_id', $request->item_id);
+            })
+            ->when($request->filled('user_id'), function ($q) use ($request) {
+                $q->where('user_id', $request->user_id);
+            })
+            ->when($request->filled('from'), function ($q) use ($request) {
+                $q->whereDate('created_at', '>=', $request->from);
+            })
+            ->when($request->filled('to'), function ($q) use ($request) {
+                $q->whereDate('created_at', '<=', $request->to);
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
-        $item->save();
-
-        // Simpan log
-        ItemLog::create([
-            'item_id'  => $item->id,
-            'user_id'  => auth()->id(),
-            'type'     => $request->type,
-            'quantity' => $request->quantity,
-            'note'     => $request->note,
+        return view('items.log.index', [
+            'logs'  => $logs,
+            'items' => Item::all(),
+            'users' => User::all(),
         ]);
-
-        return redirect()->route('items.index')
-            ->with('success', 'Stok berhasil diperbarui');
     }
 }
