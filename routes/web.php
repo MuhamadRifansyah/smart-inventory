@@ -3,8 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemLogController;
-use App\Models\Item;
-use App\Models\ItemLog;
+use App\Http\Controllers\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,20 +24,8 @@ Route::middleware(['auth'])->group(function () {
     | Dashboard (ADMIN & STAFF)
     |--------------------------------------------------------------------------
     */
-    Route::get('/dashboard', function () {
-
-        $items = Item::all();
-
-        return view('dashboard', [
-            'totalItems'  => Item::count(),
-            'totalStock'  => Item::sum('stock'),
-            'lowStock'    => Item::where('stock', '<', 20)->count(),
-            'todayLogs'   => ItemLog::whereDate('created_at', today())->count(),
-            'chartLabels' => $items->pluck('name'),
-            'chartData'   => $items->pluck('stock'),
-        ]);
-
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------
