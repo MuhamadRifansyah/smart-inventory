@@ -9,7 +9,7 @@ transition-colors duration-300">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="bg-gray-100">
+<body class="bg-gray-100 dark:bg-slate-900 text-gray-900 dark:text-gray-100">
 <div class="flex min-h-screen">
 
     <!-- SIDEBAR -->
